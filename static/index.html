@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terminal Chatbot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f17;
+      --surface: #13151f;
+      --surface2: #1a1d2e;
+      --border: #252840;
+      --accent: #6c63ff;
+      --accent2: #a78bfa;
+      --text: #e2e4f0;
+      --text-muted: #6b7280;
+      --user-bubble: linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%);
+      --bot-bubble: #1a1d2e;
+      --glow: 0 0 20px rgba(108,99,255,0.25);
+      --radius: 18px;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* ---- Header ---- */
+    header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 32px;
+      background: rgba(19,21,31,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      background: var(--user-bubble);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: var(--glow);
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      background: linear-gradient(90deg, #e2e4f0 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .status-dot {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .status-dot span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; } 50% { opacity:0.4; }
+    }
+
+    /* ---- Chat area ---- */
+    #chat-wrapper {
+      width: 100%;
+      max-width: 780px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 28px 20px 0;
+    }
+
+    #messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+      padding-bottom: 24px;
+      scroll-behavior: smooth;
+    }
+
+    /* Welcome message */
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 24px;
+      gap: 16px;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards;
+    }
+    .welcome .icon {
+      font-size: 48px;
+      filter: drop-shadow(0 0 16px rgba(108,99,255,0.5));
+    }
+    .welcome h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #e2e4f0 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .welcome p {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      max-width: 400px;
+      line-height: 1.6;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .chip {
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--surface2);
+    }
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--accent2);
+      background: rgba(108,99,255,0.1);
+    }
+
+    /* Message rows */
+    .msg-row {
+      display: flex;
+      gap: 12px;
+      opacity: 0;
+      animation: fadeUp 0.35s ease forwards;
+    }
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .avatar {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .user .avatar {
+      background: var(--user-bubble);
+      box-shadow: 0 0 14px rgba(108,99,255,0.4);
+    }
+    .bot .avatar {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+
+    .bubble {
+      max-width: 72%;
+      padding: 13px 17px;
+      border-radius: var(--radius);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+    .user .bubble {
+      background: var(--user-bubble);
+      color: #fff;
+      border-bottom-right-radius: 5px;
+    }
+    .bot .bubble {
+      background: var(--bot-bubble);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 5px;
+      font-family: 'Inter', sans-serif;
+      white-space: pre-wrap;
+    }
+
+    /* Typing indicator */
+    .typing-bubble {
+      display: flex; align-items: center; gap: 5px;
+      padding: 14px 18px;
+    }
+    .typing-bubble span {
+      width: 7px; height: 7px;
+      background: var(--accent2);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .typing-bubble span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-bubble span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,60%,100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    /* ---- Input ---- */
+    #input-bar {
+      width: 100%;
+      max-width: 780px;
+      padding: 16px 20px 24px;
+      position: sticky;
+      bottom: 0;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-wrap:focus-within {
+      border-color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    #query-input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      color: var(--text);
+      resize: none;
+      max-height: 140px;
+      line-height: 1.5;
+      padding: 4px 2px;
+    }
+    #query-input::placeholder { color: var(--text-muted); }
+
+    #send-btn {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      border: none;
+      background: var(--user-bubble);
+      color: #fff;
+      font-size: 17px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 0 12px rgba(108,99,255,0.35);
+    }
+    #send-btn:hover:not(:disabled) { transform: scale(1.07); }
+    #send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .hint {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+
+    /* Scrollbar */
+    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🤖</div>
+  <h1>Terminal Chatbot</h1>
+  <div class="status-dot"><span></span> Online</div>
+</header>
+
+<div id="chat-wrapper">
+  <div id="messages">
+    <div class="welcome" id="welcome">
+      <div class="icon">✨</div>
+      <h2>Ask me anything</h2>
+      <p>I use your knowledge base to find the most relevant answers. Try one of the examples below or type your own question.</p>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+</div>
+
+<div id="input-bar">
+  <div class="input-wrap">
+    <textarea id="query-input" rows="1" placeholder="Type your question…" aria-label="Query input"></textarea>
+    <button id="send-btn" aria-label="Send">➤</button>
+  </div>
+  <p class="hint">Press <kbd>Enter</kbd> to send &nbsp;·&nbsp; <kbd>Shift+Enter</kbd> for a new line</p>
+</div>
+
+<script>
+  const EXAMPLE_CHIPS = [
+    "What is this document about?",
+    "Summarize the key points",
+    "Give me the most important facts",
+  ];
+
+  const messagesEl = document.getElementById("messages");
+  const inputEl    = document.getElementById("query-input");
+  const sendBtn    = document.getElementById("send-btn");
+  const chipsEl    = document.getElementById("chips");
+
+  // Build example chips
+  EXAMPLE_CHIPS.forEach(text => {
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.textContent = text;
+    chip.onclick = () => { inputEl.value = text; inputEl.focus(); autoResize(); };
+    chipsEl.appendChild(chip);
+  });
+
+  // Auto-resize textarea
+  function autoResize() {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + "px";
+  }
+  inputEl.addEventListener("input", autoResize);
+
+  // Enter to send, Shift+Enter for newline
+  inputEl.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  sendBtn.addEventListener("click", sendMessage);
+
+  function appendMessage(role, text) {
+    const row  = document.createElement("div");
+    row.className = `msg-row ${role}`;
+
+    const avatar  = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = role === "user" ? "🧑" : "🤖";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return bubble;
+  }
+
+  function showTyping() {
+    const row = document.createElement("div");
+    row.className = "msg-row bot";
+    row.id = "typing-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = "🤖";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble typing-bubble";
+    bubble.innerHTML = "<span></span><span></span><span></span>";
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById("typing-row");
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const query = inputEl.value.trim();
+    if (!query) return;
+
+    // Hide welcome screen
+    const welcome = document.getElementById("welcome");
+    if (welcome) welcome.remove();
+
+    // Reset input
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    sendBtn.disabled = true;
+
+    appendMessage("user", query);
+    showTyping();
+
+    try {
+      const res = await fetch("/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query })
+      });
+      const data = await res.json();
+      removeTyping();
+
+      if (res.ok) {
+        appendMessage("bot", data.answer);
+      } else {
+        appendMessage("bot", "⚠️ " + (data.error || "Something went wrong. Please try again."));
+      }
+    } catch (err) {
+      removeTyping();
+      appendMessage("bot", "⚠️ Could not reach the server. Make sure the backend is running.");
+    } finally {
+      sendBtn.disabled = false;
+      inputEl.focus();
+    }
+  }
+</script>
+</body>
+</html>
